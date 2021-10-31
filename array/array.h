@@ -11,5 +11,5 @@ typedef struct tagArray{
 } array;
 
 RC array_init(array* arr);
-RC array_append(array *arr, T num);
+RC array_append(array *arr, ARRAY_DATATYPE num);
 void array_free(array* arr);

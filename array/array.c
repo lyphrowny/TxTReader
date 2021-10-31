@@ -32,7 +32,7 @@ RC array_init(array* arr) {
     return (arr->data = malloc(arr->capacity * sizeof *arr->data)) == NULL ? BAD_ALLOC : SUCCESS;
 }
 
-RC array_append(array *arr, T num) {
+RC array_append(array *arr, ARRAY_DATATYPE num) {
     if (!_hasSpace(arr) && _realloc(arr) != SUCCESS)
         return FAILURE;
     // else we have either the success or available space
