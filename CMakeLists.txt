@@ -3,9 +3,9 @@ project(Win32Api C)
 
 set(CMAKE_C_STANDARD 99)
 
-set(GLOBAL global.h)
+set(GLOBAL global.h global.c)
 set(ARRAY array/array.h array/array.c)
-set(BUFFER buffer/buffer.h)
 set(DATAMODEL dataModel/dataModel.h dataModel/dataModel.c)
+set(VIEWMODEL viewModel/viewModel.h viewModel/viewModel.c)
 
-add_executable(Win32Api ${GLOBAL} main.c ${ARRAY} ${BUFFER} ${DATAMODEL} BufferedRead.h BufferedRead.c)
+add_executable(Win32Api ${GLOBAL} main.c ${ARRAY} ${DATAMODEL} ${VIEWMODEL} BufferedRead.h BufferedRead.c)

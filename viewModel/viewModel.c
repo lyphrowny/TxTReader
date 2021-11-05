@@ -46,7 +46,7 @@ size_t __upperBinarySearch(array *arr, size_t l, size_t r, const ARRAY_DATATYPE 
     return l;
 }
 
-static RC _getLineNum(viewModel *vm, dataModel *dm, size_t *lineNum) {
+static RC _getLineNum(viewModel *vm, array *lineBreaks, size_t *lineNum) {
     // absolute position in the buffer
     ARRAY_DATATYPE currPos;
     defRC
@@ -63,20 +63,18 @@ static RC _getLineNum(viewModel *vm, dataModel *dm, size_t *lineNum) {
     // #1 lineBreaks   12 24 36 48 60
     //                    ^  * // 30 is bounded by 36 and 36 is the end of the line, hence the start is from 24 + ?1
     // FIXME should be just plain array, not necessarily the dm's one
-    *lineNum = __upperBinarySearch(dm->lineBreaks, 0, dm->lineBreaks->size, &currPos) - 1;
+    *lineNum = __upperBinarySearch(lineBreaks, 0, lineBreaks->size, &currPos) - 1;
     return SUCCESS;
 }
 
-static RC _getAbsolutePos(viewModel *vm, dataModel *dm, size_t *pos) {
+// TODO merge into one func? ^
+static RC _getAbsolutePos(viewModel *vm, dataModel *dm, array* lineBreaks, size_t *pos) {
     size_t lineNum;
     ARRAY_DATATYPE lineEnding;
     defRC
-    checkRC(_getLineNum(vm, dm, &lineNum))
+    checkRC(_getLineNum(vm, lineBreaks, &lineNum))
     // FIXME what if lineNum is -1?
-    checkRC(array_takeAt(dm->lineBreaks, lineNum, &lineEnding))
-    // not always true
-    // in case the word was split, the newline points to the symbol of the word, which is also the symbol of the beginning
-    // of the new line
+    checkRC(array_takeAt(lineBreaks, lineNum, &lineEnding))
     *pos = lineEnding + (dm->buff[lineEnding] == '\r' || dm->buff[lineEnding] == ' ');
     return SUCCESS;
 }
@@ -116,6 +114,7 @@ static void _remodelViewModel(viewModel *vm, dataModel *dm, ushort width) {
     }
 }
 
+// TODO merge into one func? ^
 static void _restoreViewModel(viewModel *vm, dataModel *dm) {
     // TODO convert position
 
@@ -124,21 +123,42 @@ static void _restoreViewModel(viewModel *vm, dataModel *dm) {
     array_copy(vm->lineBreaks, dm->lineBreaks);
 }
 
-RC drawViewModel(viewModel *vm, dataModel *dm, ushort width) {
-    defRC
-    // not the right place for that
-//    vm->mode ^= 1;
-
+RC buildViewModel(viewModel* vm, dataModel* dm, size_t* posToPreserve) {
     switch (vm->mode) {
         case WRAP:
-            _remodelViewModel(vm, dm, width);
+            _getAbsolutePos(vm, dm, vm->lineBreaks, posToPreserve);
+            _remodelViewModel(vm, dm, vm->maxLen);
             break;
         case NO_WRAP:
+            _getAbsolutePos(vm, dm, dm->lineBreaks, posToPreserve);
             _restoreViewModel(vm, dm);
             break;
         default:
             return FAILURE;
     }
+    return SUCCESS;
+}
+
+RC resizeViewModel(viewModel* vm, dataModel* dm, ushort width, ushort height) {
+    vm->maxLen = width;
+    size_t posToPreserve;
+    defRC
+    checkRC(buildViewModel(vm, dm, &posToPreserve))
+
+    return SUCCESS;
+}
+
+
+RC drawViewModel(viewModel *vm, dataModel *dm, ushort width) {
+    defRC
+    // not the right place for that
+//    vm->mode ^= 1;
+
+//  all the operations on the buffer should happen
+//  before the drawing, so the following lines are
+//  out of place
+//    vm->maxLen = width;
+//    buildViewModel(vm, dm);
 
     ARRAY_DATATYPE prev = 0, curr;
     for (size_t i = 0; i < vm->lineBreaks->size; ++i) {

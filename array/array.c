@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <malloc.h>
+#include <memory.h>
 #include "array.h"
 
 static bool _isValid(array *arr) {
@@ -16,7 +17,6 @@ static RC _realloc(array *arr) {
     ARRAY_DATATYPE *_data;
     if ((_data = realloc(arr->data, _capacity * sizeof *arr->data)) == NULL) {
         free(arr->data);
-        perror("Error reallocating memory");
         return BAD_REALLOC;
     }
     arr->data = _data;
@@ -24,12 +24,24 @@ static RC _realloc(array *arr) {
     return SUCCESS;
 }
 
-RC array_init(array* arr) {
+static RC _array_alloc(array* arr, size_t capacity) {
     if (!_isValid(arr))
         return FAILURE;
     arr->size = 0;
-    arr->capacity = MIN_ALLOC;
+    arr->capacity = max(MIN_ALLOC, capacity);
     return (arr->data = malloc(arr->capacity * sizeof *arr->data)) == NULL ? BAD_ALLOC : SUCCESS;
+}
+
+RC array_init(array *arr) {
+    defRC
+    checkRC(_array_alloc(arr, MIN_ALLOC))
+    return SUCCESS;
+}
+
+RC array_prealloc(array* arr, size_t capacity) {
+    defRC
+    checkRC(_array_alloc(arr, capacity))
+    return SUCCESS;
 }
 
 RC array_append(array *arr, ARRAY_DATATYPE num) {
@@ -40,11 +52,27 @@ RC array_append(array *arr, ARRAY_DATATYPE num) {
     return SUCCESS;
 }
 
-void array_free(array* arr) {
+RC array_takeAt(array *arr, size_t pos, ARRAY_DATATYPE *dest) {
+    if (pos < arr->size) {
+        *dest = arr->data[pos];
+        return SUCCESS;
+    }
+    return OUT_OF_BOUNDS;
+}
+
+RC array_copy(array* dest, const array* src) {
+    defRC
+    array_free(dest);
+    checkRC(array_prealloc(dest, src->size))
+    memcpy(dest->data, src->data, src->size * sizeof *src->data);
+    dest->size = src->size;
+    return SUCCESS;
+}
+
+void array_free(array *arr) {
     if (_isValid(arr)) {
         free(arr->data);
         arr->data = NULL;
         arr->capacity = arr->size = 0;
-        arr = NULL;
     }
 }
