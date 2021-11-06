@@ -4,6 +4,7 @@
 
 #define FONT_HEIGHT 16
 #define FONT_NAME "Ubuntu Mono"
+#define FONT_LOCATION "resources\\UbuntuMono-R.ttf"
 
 #define LINE_SPACING_COEFF 1.75
 
@@ -16,6 +17,7 @@
 typedef struct tagFont {
     HFONT hFont;
     ushort chHeight, chWidth;
+    char* fontPath;
 } font;
 
 RC font_SetFont(HWND hwnd, font *f);

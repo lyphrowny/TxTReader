@@ -1,3 +1,6 @@
+// for PathCombine
+#include <shlwapi.h>
+
 #include "font.h"
 
 
@@ -7,6 +10,13 @@ static inline bool _isValid(font *f) {
 
 RC font_SetFont(HWND hwnd, font *f) {
     font_Free(f);
+
+    char* buff;
+    fail((buff = calloc(MAX_PATH, sizeof *buff)) == NULL || (f->fontPath = calloc(MAX_PATH, sizeof *f->fontPath)) == NULL,
+         "cannot allocate memory for font path")
+    GetCurrentDirectory(MAX_PATH, buff);
+    PathCombine(f->fontPath, buff, FONT_LOCATION);
+    fail(AddFontResource(f->fontPath) == 0, "font wasn't loaded");
 
     HDC hdc = GetDC(hwnd);
     // the default mapping mode is MM_TEXT, so the -MulDiv is not useless
@@ -34,8 +44,11 @@ RC font_SetFont(HWND hwnd, font *f) {
 }
 
 void font_Free(font *f) {
-    if (_isValid(f) && f->hFont != NULL)
+    if (_isValid(f) && f->hFont != NULL) {
         DeleteObject(f->hFont);
+        fail(RemoveFontResource(f->fontPath) == 0, "font wasn't unloaded");
+        free(f->fontPath);
+    }
 }
 
 RC font_GetHeight(font *f, ushort *height) {
