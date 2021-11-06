@@ -10,23 +10,25 @@ RC font_SetFont(HWND hwnd, font *f) {
 
     HDC hdc = GetDC(hwnd);
     // the default mapping mode is MM_TEXT, so the -MulDiv is not useless
-    f->hFont = CreateFont(-MulDiv(FONT_HEIGHT, GetDeviceCaps(hdc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, FF_MODERN,
+    f->hFont = CreateFont(-MulDiv(FONT_HEIGHT, GetDeviceCaps(hdc, LOGPIXELSY), 72), 0, 0, 0, FW_MEDIUM, 0, 0, 0, DEFAULT_CHARSET, 0, 0, 0, FF_MODERN,
                       FONT_NAME);
     fail(!f->hFont, "couldn't create font")
     // set the newly created font to the window
     SelectObject(hdc, f->hFont);
     SetBkMode(hdc, TRANSPARENT);
 
-    TEXTMETRIC tm;
-    if (!GetTextMetrics(hdc, &tm)) {
-        font_Free(f);
-        return FAILURE;
-    }
-    f->chHeight = tm.tmHeight + tm.tmExternalLeading;
-    f->chWidth = tm.tmMaxCharWidth;
+    OUTLINETEXTMETRIC *OutlineMetric;
+    fail((OutlineMetric = malloc(sizeof *OutlineMetric)) == NULL, "OutlineMetric memalloc error")
+    GetOutlineTextMetrics(hdc, sizeof *OutlineMetric, OutlineMetric);
+    f->chHeight = OutlineMetric->otmAscent + OutlineMetric->otmDescent + OutlineMetric->otmLineGap;
 
-    debug("%ld %ld %ld _%c_\n", tm.tmHeight, f->chHeight, f->chWidth, tm.tmBreakChar);
+    ABC abc;
+    // FIXME for mono fonts only!
+    GetCharABCWidths(hdc, 0, 0, &abc);
+    f->chWidth = abc.abcC + abc.abcB + abc.abcA;
+    free(OutlineMetric);
 
+    debug("cH %ld cW %ld\n", f->chHeight, f->chWidth);
     ReleaseDC(hwnd, hdc);
     return SUCCESS;
 }

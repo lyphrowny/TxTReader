@@ -2,10 +2,10 @@
 
 #include "../global.h"
 
-#define FONT_HEIGHT 12
-#define FONT_NAME "Courier New"
+#define FONT_HEIGHT 16
+#define FONT_NAME "Ubuntu Mono"
 
-#define LINE_SPACING_COEFF 1.25
+#define LINE_SPACING_COEFF 1.75
 
 
 // TODO check the RC codes
