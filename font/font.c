@@ -18,7 +18,7 @@ RC font_SetFont(HWND hwnd, font *f) {
     GetModuleFileName(NULL, buff, MAX_PATH);
     PathRemoveFileSpec(buff);
     char* rPath = calloc(MAX_PATH, sizeof *rPath),
-    * lookUpDir = calloc(MAX_PATH, sizeof *lookUpDir);
+        * lookUpDir = calloc(MAX_PATH, sizeof *lookUpDir);
     for(int i = 0; i < MAX_DEPTH; i++) {
         for (int j = 0; j < i; j++)
             strcat(rPath, "..\\");
@@ -34,7 +34,7 @@ RC font_SetFont(HWND hwnd, font *f) {
     free(rPath);
     free(lookUpDir);
 
-    fail(f->fontPath == '\0', "font wasn't loaded")
+    failClean(f->fontPath == '\0', font_Free(f), "font wasn't loaded")
 
     HDC hdc = GetDC(hwnd);
     // the default mapping mode is MM_TEXT, so the -MulDiv is not useless
@@ -48,13 +48,13 @@ RC font_SetFont(HWND hwnd, font *f) {
     OUTLINETEXTMETRIC *OutlineMetric;
     fail((OutlineMetric = malloc(sizeof *OutlineMetric)) == NULL, "OutlineMetric memalloc error")
     GetOutlineTextMetrics(hdc, sizeof *OutlineMetric, OutlineMetric);
-    f->chHeight = OutlineMetric->otmAscent + OutlineMetric->otmDescent + OutlineMetric->otmLineGap;
+    f->chHeight = (OutlineMetric->otmAscent + OutlineMetric->otmDescent + OutlineMetric->otmLineGap) * LINE_SPACING_COEFF;
+    free(OutlineMetric);
 
     ABC abc;
     // FIXME for mono fonts only!
     GetCharABCWidths(hdc, 0, 0, &abc);
     f->chWidth = abc.abcC + abc.abcB + abc.abcA;
-    free(OutlineMetric);
 
     debug("cH %ld cW %ld\n", f->chHeight, f->chWidth);
     ReleaseDC(hwnd, hdc);
