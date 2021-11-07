@@ -5,6 +5,8 @@
 #define FONT_HEIGHT 16
 #define FONT_NAME "Ubuntu Mono"
 #define FONT_LOCATION "resources\\UbuntuMono-R.ttf"
+// how many dirs to go up - 1 (for 4, max is ../../../)
+#define MAX_DEPTH 4
 
 #define LINE_SPACING_COEFF 1.75
 
