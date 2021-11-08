@@ -3,10 +3,9 @@
 #include "BufferedRead.h"
 
 RC readFile(char *filename, dataModel *dm) {
-    defRC
     FILE *file;
 
-    fail((file = fopen(filename, "r")) == NULL, "file cannot be opened")
+    fail((file = fopen(filename, "rt")) == NULL, "file cannot be opened")
     fseek(file, 0, SEEK_END);
     size_t fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -14,21 +13,37 @@ RC readFile(char *filename, dataModel *dm) {
     fail(fileSize == 0, "empty file")
 
     // FIXME what if we're reading another file?
+    // should be fixed now
+    dm_free(dm);
     checkRC(dm_init(dm, fileSize + 1, NULL))
-    fread(dm->buff, sizeof *dm->buff, fileSize, file);
+    debug("%d", fileSize);
+    // since the file is opened in text mode,
+    // fread drops \r characters, hence the fileSize obtained
+    // in ftell becomes incorrect (the buffer doesn't contain \r, yet it has the size as if it does)
+    // with this in mind, fileSize here gets the number of read elements, which is the actual size of
+    // the buffer
+    fileSize = fread(dm->buff, sizeof *dm->buff, fileSize, file);
+    fail(ferror(file), "error while freading")
+    debug(" %d\n", fileSize);
     fclose(file);
 
+    // to get the last lineBreak set
+    // if the last line doesn't end with artificial \n,
+    // there would be no record of its end in lineBreaks
     dm->buff[fileSize] = '\n';
     size_t prev = 0;
     for (size_t i = 0; i < fileSize + 1; ++i) {
+//            debug("%02x_",dm->buff[i]);
         if (dm->buff[i] == '\n') {
+            debug("insert LineBreak at %d\n", i);
             checkRC(array_append(dm->lineBreaks, i))
-            dm->buff[i] = ' ';
+//            dm->buff[i] = ' ';
             dm_setMaxLen(dm, i - prev);
             prev = i + 1;
         }
     }
 //    checkRC(array_append(dm->lineBreaks, fileSize))
 //    dm_setMaxLen(dm, fileSize - prev);
+
     return SUCCESS;
 }
