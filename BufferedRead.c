@@ -33,17 +33,13 @@ RC readFile(char *filename, dataModel *dm) {
     dm->buff[fileSize] = '\n';
     size_t prev = 0;
     for (size_t i = 0; i < fileSize + 1; ++i) {
-//            debug("%02x_",dm->buff[i]);
         if (dm->buff[i] == '\n') {
-            debug("insert LineBreak at %d\n", i);
             checkRC(array_append(dm->lineBreaks, i))
-//            dm->buff[i] = ' ';
+            // TODO remove and fix viewModel
+             dm->buff[i] = ' ';
             dm_setMaxLen(dm, i - prev);
             prev = i + 1;
         }
     }
-//    checkRC(array_append(dm->lineBreaks, fileSize))
-//    dm_setMaxLen(dm, fileSize - prev);
-
     return SUCCESS;
 }
