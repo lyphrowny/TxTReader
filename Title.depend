@@ -1,0 +1,169 @@
+# depslib dependency file v1.0
+1631967722 source:e:\student\5030102_90401\title\main.cpp
+	<tchar.h>
+	<windows.h>
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<vector>
+	<string>
+
+1634144121 source:d:\programming\projects\win32\title\main.cpp
+	<tchar.h>
+	<windows.h>
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<vector>
+	<string>
+
+1634390536 source:d:\student\3630102.90002\title\main.cpp
+	<tchar.h>
+	<windows.h>
+	<stdarg.h>
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<vector>
+	<string>
+	"BufferedRead.h"
+
+1634386531 source:d:\student\3630102.90002\title\bufferedread.c
+	<stdio.h>
+	<malloc.h>
+	<string.h>
+	"BufferedRead.h"
+
+1634386531 d:\student\3630102.90002\title\bufferedread.h
+
+1636355109 source:d:\programming\projects\win32\reader\bufferedread.c
+	<stdio.h>
+	"BufferedRead.h"
+
+1635722974 d:\programming\projects\win32\reader\bufferedread.h
+	"global.h"
+	"dataModel/dataModel.h"
+
+1636146666 source:d:\programming\projects\win32\reader\main.cpp
+	<tchar.h>
+	<windows.h>
+	<stdarg.h>
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<vector>
+	<string>
+	"BufferedRead.h"
+	"dataModel/dataModel.h"
+
+1636252616 source:d:\programming\projects\win32\reader\array\array.c
+	<stdbool.h>
+	<stddef.h>
+	<malloc.h>
+	<memory.h>
+	"array.h"
+
+1636340858 d:\programming\projects\win32\reader\array\array.h
+	"../global.h"
+
+1636401276 d:\programming\projects\win32\reader\global.h
+	<stdbool.h>
+	"windows.h"
+
+1635722987 d:\programming\projects\win32\reader\datamodel\datamodel.h
+	"../global.h"
+	"../array/array.h"
+
+1636349039 source:d:\programming\projects\win32\reader\datamodel\datamodel.c
+	<stddef.h>
+	<stdbool.h>
+	<malloc.h>
+	"dataModel.h"
+
+1636400614 source:d:\programming\projects\win32\reader\font\font.c
+	<shlwapi.h>
+	"font.h"
+
+1636244223 d:\programming\projects\win32\reader\font\font.h
+	"../global.h"
+
+1636400821 source:d:\programming\projects\win32\reader\global.c
+	<stdio.h>
+	<stdarg.h>
+	"global.h"
+
+1636408320 source:d:\programming\projects\win32\reader\viewmodel\viewmodel.c
+	<stddef.h>
+	<malloc.h>
+	"viewModel.h"
+	"../dataModel/dataModel.h"
+
+1636400400 d:\programming\projects\win32\reader\viewmodel\viewmodel.h
+	"../global.h"
+	"../array/array.h"
+	"../dataModel/dataModel.h"
+	"../font/font.h"
+
+1635780945 source:d:\programming\projects\win32\reader\array\array.h
+	"../global.h"
+
+1635722974 source:d:\programming\projects\win32\reader\bufferedread.h
+	"global.h"
+	"dataModel/dataModel.h"
+
+1635722987 source:d:\programming\projects\win32\reader\datamodel\datamodel.h
+	"../global.h"
+	"../array/array.h"
+
+1636146352 source:d:\programming\projects\win32\reader\font\font.h
+	"../global.h"
+
+1636146639 source:d:\programming\projects\win32\reader\global.h
+	"windows.h"
+
+1636416119 source:d:\programming\projects\win32\reader\main.c
+	<tchar.h>
+	<windows.h>
+	"commdlg.h"
+	<stdlib.h>
+	<stdio.h>
+	<crtdbg.h>
+	<string.h>
+	"global.h"
+	"resources/resource.h"
+	"BufferedRead.h"
+	"dataModel/dataModel.h"
+	"viewModel/viewModel.h"
+	"font/font.h"
+
+1635779868 source:d:\programming\projects\win32\reader\viewmodel\viewmodel.h
+	"../global.h"
+	"../array/array.h"
+	"../dataModel/dataModel.h"
+
+1636405082 source:d:\programming\projects\win32\reader\resources\menu.rc
+	"menu.h"
+
+1636405014 d:\programming\projects\win32\reader\resources\menu.h
+
+1636403537 source:d:\programming\projects\win32\reader\reader.rc
+	"Reader.h"
+
+1636403877 d:\programming\projects\win32\reader\reader.h
+
+1636409775 d:\programming\projects\win32\reader\resources\reader.h
+
+1636416105 source:d:\programming\projects\win32\reader\resources\reader.rc
+	"resource.h"
+	"afxres.h"
+
+1636416105 d:\programming\projects\win32\reader\resources\resource.h
+
+1636416105 source:d:\programming\projects\win32\reader\resources\help.rc
+	"resource.h"
+	"afxres.h"
+

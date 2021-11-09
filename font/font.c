@@ -34,7 +34,7 @@ RC font_SetFont(HWND hwnd, font *f) {
     free(rPath);
     free(lookUpDir);
 
-    failClean(f->fontPath == '\0', font_Free(f), "font wasn't loaded")
+    failClean(*f->fontPath == '\0', font_Free(f), "font wasn't loaded")
 
     HDC hdc = GetDC(hwnd);
     // the default mapping mode is MM_TEXT, so the -MulDiv is not useless

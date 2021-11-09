@@ -33,35 +33,33 @@ static RC _array_alloc(array* arr, size_t capacity) {
 }
 
 RC array_init(array *arr) {
-    defRC
     checkRC(_array_alloc(arr, MIN_ALLOC))
     return SUCCESS;
 }
 
 RC array_prealloc(array* arr, size_t capacity) {
-    defRC
     checkRC(_array_alloc(arr, capacity))
     return SUCCESS;
 }
 
 RC array_append(array *arr, ARRAY_DATATYPE num) {
-    if (!_hasSpace(arr) && _realloc(arr) != SUCCESS)
-        return FAILURE;
+    fail(!_hasSpace(arr) && _realloc(arr) != SUCCESS, "either not enough space or the realloc failed")
     // else we have either the success or available space
     arr->data[arr->size++] = num;
     return SUCCESS;
 }
 
 RC array_takeAt(array *arr, size_t pos, ARRAY_DATATYPE *dest) {
+//    debug("pos %ld, arr_size %ld ", pos, arr->size);
     if (pos < arr->size) {
         *dest = arr->data[pos];
+//        debug("r takeAt %ld\n", *dest);
         return SUCCESS;
     }
     return OUT_OF_BOUNDS;
 }
 
 RC array_copy(array* dest, const array* src) {
-    defRC
     array_free(dest);
     checkRC(array_prealloc(dest, src->size))
     memcpy(dest->data, src->data, src->size * sizeof *src->data);

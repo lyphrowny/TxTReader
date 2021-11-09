@@ -1,5 +1,4 @@
 #include <stddef.h>
-#include <stdbool.h>
 #include <malloc.h>
 #include "viewModel.h"
 #include "../dataModel/dataModel.h"
@@ -8,21 +7,12 @@ static inline bool _isValid(viewModel *vm) {
     return vm != NULL;
 }
 
-RC vm_init(viewModel *vm, array *arr, dataModel *dm) {
-    if (!_isValid(vm) || dm == NULL) // FIXME guess, dm needs more checks
-        return FAILURE;
-//    array_copy(vm->lineBreaks, dm->lineBreaks);
-//    if (arr == NULL) {
-//        if ((vm->lineBreaks = malloc(sizeof *vm->lineBreaks)) == NULL)
-//            return FAILURE;
-//        array_init(vm->lineBreaks);
-//    } else
-//        vm->lineBreaks = arr;
-    // in both cases it is going to be reallocated, why bother?
-    if ((vm->lineBreaks = malloc(sizeof *vm->lineBreaks)) == NULL)
-        return FAILURE;
+RC vm_init(viewModel *vm) {
+    fail(!_isValid(vm), "dm not valid")
+    fail((vm->lineBreaks = malloc(sizeof *vm->lineBreaks)) == NULL, "bad alloc for vm->lineBreaks")
     array_init(vm->lineBreaks);
-    vm->maxLen = vm->maxLines = 0;
+
+    vm->maxChars = vm->maxLines = 0;
     vm->hPos = vm->vPos = 0;
     vm->mode = WRAP;
     return SUCCESS;
@@ -31,7 +21,7 @@ RC vm_init(viewModel *vm, array *arr, dataModel *dm) {
 size_t __upperBinarySearch(array *arr, size_t l, size_t r, const ARRAY_DATATYPE *elem) {
     size_t m;
     ARRAY_DATATYPE curr;
-    array_takeAt(arr, 0, &curr);
+    checkRC(array_takeAt(arr, 0, &curr))
     if (*elem <= curr)
         return 0;
 
@@ -46,55 +36,58 @@ size_t __upperBinarySearch(array *arr, size_t l, size_t r, const ARRAY_DATATYPE 
     return l;
 }
 
-static RC _getLineNum(viewModel *vm, array *lineBreaks, size_t *lineNum) {
-    // absolute position in the buffer
-    ARRAY_DATATYPE currPos;
-    defRC
-    // getting the ending position of the line
-    checkRC(array_takeAt(vm->lineBreaks, vm->vPos, &currPos))
-
-    // the number of line, in which the symbol is located according to the original lines (those in the data buffer)
-    // -1 is because the endings of the lines are stored, so the first pos of the line is arr[lineNum - 1] + 1
-    // TODO micro optimisation of the starting boundaries
+static RC _getLineNum(viewModel *vm, size_t *lineNum) {
+    // TODO micro optimization of the starting boundaries
     // finding the boundary of the line in the new model (whichever it is)
-    // orig lineBreaks 60
-    // now lineBreaks  10 20 30 40 50 60
-    //                       *
-    // #1 lineBreaks   12 24 36 48 60
-    //                    ^  * // 30 is bounded by 36 and 36 is the end of the line, hence the start is from 24 + ?1
-    // FIXME should be just plain array, not necessarily the dm's one
-    *lineNum = __upperBinarySearch(lineBreaks, 0, lineBreaks->size, &currPos) - 1;
+    // pos 24
+    // lineBreaks  10 20 30 40 50 60
+    //                  *
+    // upperBinarySearch will return the index of the upper bound, 2 (index starts from 0 (duh)) for 24
+    // but the drawing func starts not from the value of index 0, but from the 0 itself,
+    // therefore all the indexes are shifted to the left, due to the "virtual" zero
+    *lineNum = __upperBinarySearch(vm->lineBreaks, 0, vm->lineBreaks->size, lineNum);
     return SUCCESS;
 }
 
-// TODO merge into one func? ^
-static RC _getAbsolutePos(viewModel *vm, dataModel *dm, array* lineBreaks, size_t *pos) {
-    size_t lineNum;
-    ARRAY_DATATYPE lineEnding;
-    defRC
-    checkRC(_getLineNum(vm, lineBreaks, &lineNum))
-    // FIXME what if lineNum is -1?
-    checkRC(array_takeAt(lineBreaks, lineNum, &lineEnding))
-    *pos = lineEnding + (dm->buff[lineEnding] == '\r' || dm->buff[lineEnding] == ' ');
+static inline size_t _getActualLineStart(dataModel* dm, size_t pos) {
+    return pos + (dm->buff[pos] == ' ');
+}
+
+static RC _getAbsolutePos(viewModel *vm, dataModel *dm, size_t *pos) {
+    ARRAY_DATATYPE lineEnding = 0;
+    // no lines, nothing to do
+    if (!vm->lineBreaks->size) {
+        *pos = 0;
+        return SUCCESS;
+    }
+    if (vm->vPos)
+        checkRC(array_takeAt(vm->lineBreaks, vm->vPos - 1, &lineEnding))
+    *pos = _getActualLineStart(dm, lineEnding);
+    checkRC(array_takeAt(vm->lineBreaks, vm->vPos, &lineEnding))
+    // add either the horizontal scroll pos or the length of the line
+    *pos += min(vm->hPos, lineEnding - *pos);
     return SUCCESS;
 }
 
-static void _remodelViewModel(viewModel *vm, dataModel *dm, ushort width) {
+static void _remodelViewModel(viewModel *vm, dataModel *dm) {
     // clear the array since the new model is eager to take its place
-    // TODO prealloc with at least the size of dm->lineBreaks
     array_free(vm->lineBreaks);
+    array_prealloc(vm->lineBreaks, dm->lineBreaks->size);
 
     ARRAY_DATATYPE prev = 0, curr;
     bool flag = false;
     for (size_t i = 0; i < dm->lineBreaks->size; ++i) {
         array_takeAt(dm->lineBreaks, i, &curr);
         // while the line is larger keep splitting
-        while (curr - prev > width) {
+        while (curr - prev > vm->maxChars) {
             flag = false;
             // start looking for the place to break the line from its end
-            for (ARRAY_DATATYPE j = prev + width; j > prev; --j) {
+            for (ARRAY_DATATYPE j = prev + vm->maxChars; j > prev; --j) {
                 if (dm->buff[j] == ' ') {
                     array_append(vm->lineBreaks, j);
+                    // one can use _getActualLineStart here
+                    // but the case is trivial, since we wouldn't
+                    // get here without the condition
                     prev = j + 1;
                     flag = true;
                     break;
@@ -102,73 +95,96 @@ static void _remodelViewModel(viewModel *vm, dataModel *dm, ushort width) {
             }
             if (!flag) {
                 // break so that the word of length `width` was fit on the line
-                array_append(vm->lineBreaks, prev + width);
+                array_append(vm->lineBreaks, prev + vm->maxChars);
                 // the letter on which the break was caused shouldn't be discarded,
                 // hence no +1
-                prev += width;
+                prev += vm->maxChars;
             }
         }
         // yay, the rest of the line is short enough (even the original \n is preserved)
         array_append(vm->lineBreaks, curr);
-        prev = curr;
+        // one can use _getActualLineStart here
+        // but last character of the line is always advanced
+        prev = curr + 1;
     }
 }
 
-// TODO merge into one func? ^
-static void _restoreViewModel(viewModel *vm, dataModel *dm) {
-    // TODO convert position
-
-    vm->maxLen = dm->maxLen;
+static inline void _restoreViewModel(viewModel *vm, dataModel *dm) {
     // get the original line breaks back
     array_copy(vm->lineBreaks, dm->lineBreaks);
 }
 
-RC buildViewModel(viewModel* vm, dataModel* dm, size_t* posToPreserve) {
+inline void vm_changeViewMode(viewModel* vm) {
+    if (_isValid(vm))
+        vm->mode ^= 1;
+}
+
+RC vm_buildViewModel(HWND hwnd, viewModel* vm, dataModel* dm) {
+
+    SCROLLINFO si;
+    si.cbSize = sizeof si;
+    size_t posToPreserve;
+
+    checkRC(_getAbsolutePos(vm, dm, &posToPreserve))
+
     switch (vm->mode) {
         case WRAP:
-            _getAbsolutePos(vm, dm, vm->lineBreaks, posToPreserve);
-            _remodelViewModel(vm, dm, vm->maxLen);
+            _remodelViewModel(vm, dm);
+            checkRC(_getLineNum(vm, &posToPreserve))
+            vm->hPos = 0;
+
+            // to automatically hide it
+            si.nMax = 0;
+            si.nPage = si.nMax + 1;
             break;
         case NO_WRAP:
-            _getAbsolutePos(vm, dm, dm->lineBreaks, posToPreserve);
             _restoreViewModel(vm, dm);
+            checkRC(_getLineNum(vm, &posToPreserve))
+
+            si.nMax = dm->maxLen - 1;
+            si.nPage = vm->maxChars;
             break;
         default:
             return FAILURE;
     }
+    vm->vPos = posToPreserve;
+
+    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+    si.nMin = 0;
+    si.nPos = vm->hPos;
+    // it calls WM_PAINT because adding the scroll bar to the
+    // client area changes the size of the client area
+    SetScrollInfo(hwnd, SB_HORZ, &si, TRUE);
+
+    si.nMax = vm->lineBreaks->size - 1;
+    si.nPage = vm->maxLines;
+    si.nPos = vm->vPos;
+    SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+
     return SUCCESS;
 }
 
-RC resizeViewModel(viewModel* vm, dataModel* dm, ushort width, ushort height) {
-    vm->maxLen = width;
-    size_t posToPreserve;
-    defRC
-    checkRC(buildViewModel(vm, dm, &posToPreserve))
+RC vm_resizeViewModel(HWND hwnd, viewModel* vm, dataModel* dm, ushort width, ushort height) {
+    vm->maxLines = height;
+    vm->maxChars = width;
+
+    debug("w %ld, h %ld\n", width, height);
+    checkRC(vm_buildViewModel(hwnd, vm, dm))
+    InvalidateRect(hwnd, NULL, TRUE);
 
     return SUCCESS;
 }
 
-
-RC drawViewModel(viewModel *vm, dataModel *dm, ushort width) {
-    defRC
-    // not the right place for that
-//    vm->mode ^= 1;
-
-//  all the operations on the buffer should happen
-//  before the drawing, so the following lines are
-//  out of place
-//    vm->maxLen = width;
-//    buildViewModel(vm, dm);
-
-    ARRAY_DATATYPE prev = 0, curr;
-    for (size_t i = 0; i < vm->lineBreaks->size; ++i) {
+RC vm_drawViewModel(HDC hdc, viewModel *vm, dataModel *dm, font* f) {
+    ARRAY_DATATYPE prev, curr = 0;
+    debug("%d\n", vm->vPos);
+    if (vm->vPos)
+        checkRC(array_takeAt(vm->lineBreaks, vm->vPos - 1, &curr))
+    prev = _getActualLineStart(dm, curr);
+    for (size_t i = vm->vPos; i < min(vm->vPos + vm->maxLines, vm->lineBreaks->size); ++i) {
         checkRC(array_takeAt(vm->lineBreaks, i, &curr))
-        for (ARRAY_DATATYPE j = prev; j < curr; ++j) {
-            if (dm->buff[j] != '\r')
-                putchar(dm->buff[j]);
-        }
-        putchar('\n');
-        prev = curr + (dm->buff[curr] == '\r' || dm->buff[curr] == ' ');
+        TextOut(hdc, 0, f->chHeight * (i - vm->vPos), &dm->buff[prev + vm->hPos], curr - (prev + vm->hPos));
+        prev = _getActualLineStart(dm, curr);
     }
     return SUCCESS;
 }
@@ -179,5 +195,5 @@ void vm_free(viewModel *vm) {
         free(vm->lineBreaks);
     }
     vm->hPos = vm->vPos = 0;
-    vm->maxLen = vm->maxLines = 0;
+    vm->maxChars = vm->maxLines = 0;
 }
