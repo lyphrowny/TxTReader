@@ -24,7 +24,7 @@ static RC _realloc(array *arr) {
     return SUCCESS;
 }
 
-static RC _array_alloc(array* arr, size_t capacity) {
+static RC _array_alloc(array* arr, ARRAY_SIZETYPE capacity) {
     if (!_isValid(arr))
         return FAILURE;
     arr->size = 0;
@@ -37,7 +37,7 @@ RC array_init(array *arr) {
     return SUCCESS;
 }
 
-RC array_prealloc(array* arr, size_t capacity) {
+RC array_prealloc(array* arr, ARRAY_SIZETYPE capacity) {
     checkRC(_array_alloc(arr, capacity))
     return SUCCESS;
 }
@@ -49,11 +49,9 @@ RC array_append(array *arr, ARRAY_DATATYPE num) {
     return SUCCESS;
 }
 
-RC array_takeAt(array *arr, size_t pos, ARRAY_DATATYPE *dest) {
-//    debug("pos %ld, arr_size %ld ", pos, arr->size);
+RC array_takeAt(array *arr, ARRAY_SIZETYPE pos, ARRAY_DATATYPE *dest) {
     if (pos < arr->size) {
         *dest = arr->data[pos];
-//        debug("r takeAt %ld\n", *dest);
         return SUCCESS;
     }
     return OUT_OF_BOUNDS;

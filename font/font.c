@@ -8,8 +8,8 @@ static inline bool _isValid(font *f) {
     return f != NULL;
 }
 
-RC font_SetFont(HWND hwnd, font *f) {
-    font_Free(f);
+RC font_setFont(HWND hwnd, font *f) {
+    font_free(f);
 
     char* buff;
     fail((buff = calloc(MAX_PATH, sizeof *buff)) == NULL || (f->fontPath = calloc(MAX_PATH, sizeof *f->fontPath)) == NULL,
@@ -34,7 +34,7 @@ RC font_SetFont(HWND hwnd, font *f) {
     free(rPath);
     free(lookUpDir);
 
-    failClean(*f->fontPath == '\0', font_Free(f), "font wasn't loaded")
+    failClean(*f->fontPath == '\0', font_free(f), "font wasn't loaded")
 
     HDC hdc = GetDC(hwnd);
     // the default mapping mode is MM_TEXT, so the -MulDiv is not useless
@@ -56,12 +56,11 @@ RC font_SetFont(HWND hwnd, font *f) {
     GetCharABCWidths(hdc, 0, 0, &abc);
     f->chWidth = abc.abcC + abc.abcB + abc.abcA;
 
-    debug("cH %ld cW %ld\n", f->chHeight, f->chWidth);
     ReleaseDC(hwnd, hdc);
     return SUCCESS;
 }
 
-void font_Free(font *f) {
+void font_free(font *f) {
     if (_isValid(f) && f->hFont != NULL) {
         DeleteObject(f->hFont);
         fail(RemoveFontResource(f->fontPath) == 0, "font wasn't unloaded");
@@ -69,16 +68,10 @@ void font_Free(font *f) {
     }
 }
 
-RC font_GetHeight(font *f, ushort *height) {
-    if (!_isValid(f))
-        return FAILURE;
-    *height = f->chHeight;
-    return SUCCESS;
+ushort font_getHeight(font *f) {
+    return (_isValid(f)) * f->chHeight;
 }
 
-RC font_GetWidth(font *f, ushort *width) {
-    if (!_isValid(f))
-        return FAILURE;
-    *width = f->chWidth;
-    return SUCCESS;
+ushort font_getWidth(font *f) {
+    return (_isValid(f)) * f->chWidth;
 }

@@ -1,7 +1,7 @@
 #include "resource.h"
 #include "afxres.h"
 
-ABOUTBOX DIALOG DISCARDABLE 100, 38, 180, 140
+ABOUTBOX DIALOG 100, 38, 180, 140
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
 FONT 10, "Ms Sans Serif"
 
@@ -12,7 +12,7 @@ BEGIN
     CTEXT "It's up to you to have a boat, if you want to stay afloat", IDC_STATIC, 7, 28, 166, 10
     CTEXT "Every man for himself", IDC_STATIC, 7, 40, 166, 8
     CTEXT "God takes care of those who take care of themselves", IDC_STATIC, 7, 52, 166, 10
-    RTEXT "Made by lypthrowny", IDC_STATIC, 7, 76, 166, 10
+    RTEXT "Made by lyphrowny", IDC_STATIC, 7, 76, 166, 10
     RTEXT "(c) 2021", IDC_STATIC, 7, 88, 166, 10
 END
 

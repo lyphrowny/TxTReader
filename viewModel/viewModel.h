@@ -12,13 +12,15 @@ typedef enum tagWordWrap {
 
 typedef struct tagViewModel {
     array *lineBreaks;
-    size_t hPos, vPos,
-            maxLines, maxChars;
+    ARRAY_SIZETYPE hPos, vPos;
+    ushort maxLines, maxChars;
     WORD_WRAP mode;
 } viewModel;
 
 RC vm_init(viewModel *vm);
 void vm_changeViewMode(viewModel* vm);
-RC vm_resizeViewModel(HWND hwnd, viewModel* vm, dataModel* dm, ushort width, ushort height);
+//RC vm_buildViewModel(HWND hwnd, viewModel* vm, dataModel* dm);
+RC vm_buildViewModel(HWND hwnd, viewModel* vm, dataModel* dm, ushort width, ushort height);
+RC vm_resizeViewModel(HWND hwnd, viewModel* vm, dataModel* dm, font* f, ushort width, ushort height);
 RC vm_drawViewModel(HDC hdc, viewModel *vm, dataModel *dm, font* f);
 void vm_free(viewModel *vm);

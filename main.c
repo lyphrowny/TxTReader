@@ -4,28 +4,17 @@
     #define UNICODE
 #endif
 
-#include <tchar.h>
 #include <windows.h>
-#include "commdlg.h"
-
-
-#include <stdlib.h>
-#include <stdio.h>
+#include <tchar.h>
 #include <crtdbg.h>
-#include <string.h>
-
 
 #include "global.h"
 #include "resources/resource.h"
-
-#include "BufferedRead.h"
-#include "dataModel/dataModel.h"
-#include "viewModel/viewModel.h"
-#include "font/font.h"
+#include "docker/docker.h"
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure(HWND, UINT, WPARAM, LPARAM);
-BOOL CALLBACK HelpDialogProcedure(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK AboutDialogProcedure(HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[] = _T("Reader");
@@ -39,7 +28,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     HWND hwnd;               /* This is the handle for our window */
     MSG messages;            /* Here messages to the application are saved */
     WNDCLASSEX wincl;        /* Data structure for the windowclass */
-    HACCEL hAccel;
+    HACCEL hAccel; // menu shortcuts
+    docker* doc;
 
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_MODE_STDOUT);
@@ -62,14 +52,14 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     wincl.hCursor = LoadCursor(NULL, IDC_ARROW);
     wincl.lpszMenuName = szClassName;
     wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
-    wincl.cbWndExtra = 0;                      /* structure or the window instance */
+    wincl.cbWndExtra = sizeof doc; // space for the pointer to the docker
     /* Use Windows's default color as the background of the window */
     wincl.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
 
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
         return 0;
-    debug("before minmax\n");
+
     /* The class is registered, let's create the program*/
     hwnd = CreateWindowEx (
            0,                   /* Extended possibilities for variation */
@@ -85,9 +75,6 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            hThisInstance,       /* Program Instance handler */
            lpszArgument         /* No Window Creation data */
     );
-    /* Make the window visible on the screen */
-    ShowWindow (hwnd, nCmdShow);
-
     hAccel = LoadAccelerators(hThisInstance, szClassName);
 
     /* Run the message loop. It will run until GetMessage() returns 0 */
@@ -105,17 +92,64 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+void onScroll(HWND hwnd, docker* doc, int barType, ushort scrollRequest) {
+    doc->si.fMask = SIF_ALL;
+    GetScrollInfo(hwnd, barType, &doc->si);
+    int pos = doc->si.nPos;
+    switch(scrollRequest) {
+        case SB_LINEUP:     doc->si.nPos -= 1;                break;
+        case SB_LINEDOWN:   doc->si.nPos += 1;                break;
+        case SB_PAGEUP:     doc->si.nPos -= doc->si.nPage;    break;
+        case SB_PAGEDOWN:   doc->si.nPos += doc->si.nPage;    break;
+        default:
+            if (barType == SB_VERT) {
+                switch (scrollRequest) {
+                    case SB_TOP:        doc->si.nPos = doc->si.nMin;      break;
+                    case SB_BOTTOM:     doc->si.nPos = doc->si.nMax;      break;
+                    case SB_THUMBTRACK: doc->si.nPos = doc->si.nTrackPos; break;
+                    default:
+                        break;
+                }
+            }
+            if (barType == SB_HORZ && scrollRequest == SB_THUMBPOSITION)
+                doc->si.nPos = doc->si.nTrackPos;
+            break;
+    }
+
+    doc->si.fMask = SIF_POS;
+    SetScrollInfo(hwnd, barType, &doc->si, TRUE);
+    GetScrollInfo(hwnd, barType, &doc->si);
+
+    if ((ARRAY_SIZETYPE)doc->si.nPos != pos) {
+        // unless vm_draw is smart enough to provide only
+        // the data for repaint, it's useless
+    //                ScrollWindow(hwnd, 0, f.chHeight * (vm.vPos - si.nPos), NULL, NULL);
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+}
+
+
 /*  This function is called by the Windows function DispatchMessage()  */
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    HDC hdc;
-    static dataModel dm;
-    static viewModel vm;
-    static font f;
-    ulong scrollLines;
-    static int deltaPerLine, accumDelta;
-    static HINSTANCE hInstance;
+    docker* doc = (docker*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!doc) {
+        switch (message) {
+            case WM_CREATE:
+                failClean(docker_init(hwnd, &doc) != SUCCESS, docker_free(&doc), "failed to init Docker")
+                SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)doc);
 
+                SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &doc->scrollLines, 0);
+                doc->deltaPerLine = (doc->scrollLines != 0) * (WHEEL_DELTA / doc->scrollLines);
+
+                doc->hInstance = ((CREATESTRUCT*)lParam)->hInstance;
+
+                SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW | SWP_NOREDRAW);
+                return 0;
+            default:
+                return DefWindowProc (hwnd, message, wParam, lParam);
+            }
+    }
     switch (message) /* handle the messages */
     {
         case WM_QUERYENDSESSION:
@@ -125,225 +159,109 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 DestroyWindow(hwnd);
             return 0;
         case WM_DESTROY:
-            font_Free(&f);
-            vm_free(&vm);
-            dm_free(&dm);
+            docker_free(&doc);
             PostQuitMessage(0); /* send a WM_QUIT to the message queue */
             return 0;
-        case WM_CREATE:
-            hInstance = ((CREATESTRUCT*)lParam)->hInstance;
-            font_SetFont(hwnd, &f);
-            readFile((char*)((CREATESTRUCT*)lParam)->lpCreateParams, &dm);
-            vm_init(&vm);
-        // fall through
-        case WM_SETTINGCHANGE:
-            SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &scrollLines, 0);
-            deltaPerLine = (scrollLines != 0) * (WHEEL_DELTA / scrollLines);
-            return 0;
         case WM_GETMINMAXINFO:
-            debug("minmax\n");
-            SCROLLINFO si;
-            si.cbSize = sizeof si;
-            si.fMask = SIF_RANGE | SIF_PAGE;
+            doc->si.fMask = SIF_RANGE | SIF_PAGE;
 
             RECT clientRect;
             clientRect.top = clientRect.left = 0;
 
-            GetScrollInfo(hwnd, SB_VERT, &si);
-            clientRect.right = f.chWidth * MIN_CHARS + ((int)si.nPage <= si.nMax - si.nMin) * GetSystemMetrics(SM_CXVSCROLL);
-            GetScrollInfo(hwnd, SB_HORZ, &si);
-            clientRect.bottom = f.chHeight * MIN_LINES + ((int)si.nPage <= si.nMax - si.nMin) * GetSystemMetrics(SM_CYVSCROLL);
+            GetScrollInfo(hwnd, SB_VERT, &doc->si);
+            clientRect.right = docker_getMinWidth(doc) + ((int)doc->si.nPage <= doc->si.nMax - doc->si.nMin) * GetSystemMetrics(SM_CXVSCROLL);
+            GetScrollInfo(hwnd, SB_HORZ, &doc->si);
+            clientRect.bottom = docker_getMinHeight(doc) + ((int)doc->si.nPage <= doc->si.nMax - doc->si.nMin) * GetSystemMetrics(SM_CYVSCROLL);
             // to have not the window itself fit, but the client area
             AdjustWindowRect(&clientRect, WS_OVERLAPPEDWINDOW, TRUE);
             // the test has shown, that DefWindowProc implements similar logic
             // hence assigning "overhead" is overlooked
-
-            // font is static, hence its fields are inited with 0, therefore no error
             ((LPMINMAXINFO)lParam)->ptMinTrackSize.x = clientRect.right - clientRect.left;
             ((LPMINMAXINFO)lParam)->ptMinTrackSize.y = clientRect.bottom - clientRect.top;
             return 0;
         case WM_SIZE:
-            debug("size (h %ld, w %ld)\n", HIWORD(lParam), LOWORD(lParam));
-            vm_resizeViewModel(hwnd, &vm, &dm, LOWORD(lParam) / f.chWidth, HIWORD(lParam) / f.chHeight);
+            if (docker_isSailed(doc))
+                checkRC(vm_resizeViewModel(hwnd, doc->vm, doc->dm, doc->f, LOWORD(lParam) / font_getWidth(doc->f), HIWORD(lParam) / font_getHeight(doc->f)))
             return 0;
         case WM_VSCROLL:
-            si.cbSize = sizeof si;
-            si.fMask = SIF_ALL;
-            GetScrollInfo(hwnd, SB_VERT, &si);
-
-            vm.vPos = si.nPos;
-
-            switch (LOWORD(wParam)) {
-                case SB_TOP:
-                    si.nPos = si.nMin;
-                    break;
-                case SB_BOTTOM:
-                    si.nPos = si.nMax;
-                    break;
-                case SB_LINEUP:
-                    si.nPos -= 1;
-                    break;
-                case SB_LINEDOWN:
-                    si.nPos += 1;
-                    break;
-                case SB_PAGEUP:
-                    si.nPos -= si.nPage;
-                    break;
-                case SB_PAGEDOWN:
-                    si.nPos += si.nPage;
-                    break;
-                case SB_THUMBPOSITION:
-                    si.nPos = si.nTrackPos;
-                    break;
-                default:
-                    break;
-            }
-            si.fMask = SIF_POS;
-            SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
-            GetScrollInfo(hwnd, SB_VERT, &si);
-
-            if (si.nPos != vm.vPos) {
-//                 unless vm_draw is smart enough to provide only
-//                 the data for repaint, it's useless
-//                ScrollWindow(hwnd, 0, f.chHeight * (vm.vPos - si.nPos), NULL, NULL);
-                InvalidateRect(hwnd, NULL, TRUE);
-//                UpdateWindow(hwnd);
-            }
+            onScroll(hwnd, doc, SB_VERT, LOWORD(wParam));
             return 0;
         case WM_HSCROLL:
-            si.cbSize = sizeof si;
-            si.fMask = SIF_ALL;
-            GetScrollInfo(hwnd, SB_HORZ, &si);
-
-            vm.hPos = si.nPos;
-
-            switch (LOWORD(wParam)) {
-                case SB_LINELEFT:
-                    si.nPos -= 1;
-                    break;
-                case SB_LINERIGHT:
-                    si.nPos += 1;
-                    break;
-                case SB_PAGELEFT:
-                    si.nPos -= si.nPage;
-                    break;
-                case SB_PAGERIGHT:
-                    si.nPos += si.nPage;
-                    break;
-                case SB_THUMBPOSITION:
-                    si.nPos = si.nTrackPos;
-                    break;
-                default:
-                    break;
-            }
-            si.fMask = SIF_POS;
-            SetScrollInfo(hwnd, SB_HORZ, &si, TRUE);
-            GetScrollInfo(hwnd, SB_HORZ, &si);
-
-            if (si.nPos != vm.hPos) {
-//                ScrollWindow(hwnd, f.chWidth * (vm.hPos - si.nPos), 0, NULL, NULL);
-//                vm.hPos = si.nPos;
-                InvalidateRect(hwnd, NULL, TRUE);
-//                UpdateWindow(hwnd);
-            }
+            onScroll(hwnd, doc, SB_HORZ, LOWORD(wParam));
             return 0;
         case WM_MOUSEWHEEL:
-            if (deltaPerLine == 0)
+            if (doc->deltaPerLine == 0)
                 return 0;
-            accumDelta += (short) HIWORD (wParam);
-            while(accumDelta >= deltaPerLine) {
+            doc->accumDelta += (short) HIWORD (wParam);
+            while(doc->accumDelta >= doc->deltaPerLine) {
                 SendMessage(hwnd, WM_VSCROLL, SB_LINEUP, 0);
-                accumDelta -= deltaPerLine;
+                doc->accumDelta -= doc->deltaPerLine;
             }
-            while(accumDelta <= -deltaPerLine) {
+            while(doc->accumDelta <= -doc->deltaPerLine) {
                 SendMessage(hwnd, WM_VSCROLL, SB_LINEDOWN, 0);
-                accumDelta += deltaPerLine;
+                doc->accumDelta += doc->deltaPerLine;
             }
             return 0;
         case WM_KEYDOWN:
             switch (wParam) {
-                case VK_HOME:
-                    SendMessage(hwnd, WM_VSCROLL, SB_TOP, 0);
-                    break;
-                case VK_END:
-                    SendMessage(hwnd, WM_VSCROLL, SB_BOTTOM, 0);
-                    break;
-                case VK_PRIOR:
-                    SendMessage(hwnd, WM_VSCROLL, SB_PAGEUP, 0);
-                    break;
-                case VK_NEXT:
-                    SendMessage(hwnd, WM_VSCROLL, SB_PAGEDOWN, 0);
-                    break;
-                case VK_UP:
-                    SendMessage(hwnd, WM_VSCROLL, SB_LINEUP, 0);
-                    break;
-                case VK_DOWN:
-                    SendMessage(hwnd, WM_VSCROLL, SB_LINEDOWN, 0);
-                    break;
-                case VK_LEFT:
-                    SendMessage(hwnd, WM_HSCROLL, SB_PAGELEFT, 0);
-                    break;
-                case VK_RIGHT:
-                    SendMessage(hwnd, WM_HSCROLL, SB_PAGERIGHT, 0);
-                    break;
+                case VK_HOME:  SendMessage(hwnd, WM_VSCROLL, SB_TOP, 0);       break;
+                case VK_END:   SendMessage(hwnd, WM_VSCROLL, SB_BOTTOM, 0);    break;
+                case VK_PRIOR: SendMessage(hwnd, WM_VSCROLL, SB_PAGEUP, 0);    break;
+                case VK_NEXT:  SendMessage(hwnd, WM_VSCROLL, SB_PAGEDOWN, 0);  break;
+                case VK_UP:    SendMessage(hwnd, WM_VSCROLL, SB_LINEUP, 0);    break;
+                case VK_DOWN:  SendMessage(hwnd, WM_VSCROLL, SB_LINEDOWN, 0);  break;
+                case VK_LEFT:  SendMessage(hwnd, WM_HSCROLL, SB_PAGELEFT, 0);  break;
+                case VK_RIGHT: SendMessage(hwnd, WM_HSCROLL, SB_PAGERIGHT, 0); break;
             }
             return 0;
         case WM_PAINT:
-            debug("paint\n");
-            PAINTSTRUCT ps;
-            hdc = BeginPaint(hwnd, &ps);
-            // FIXME in case of not SUCCESS, checkRC will terminate the func flow,
-            //  hence EndPaint won't be called
-            // ^ the whole reason of leaving Paint here, not in vm_drawViewModel,
-            //  was in maintaining the flow, but it's discarded here as well - bad
-//            vm_drawViewModel(hdc, &vm, &dm, &f);
-            si.cbSize = sizeof si;
-            si.fMask = SIF_POS;
-            GetScrollInfo(hwnd, SB_VERT, &si);
-            vm.vPos = si.nPos;
-            GetScrollInfo(hwnd, SB_HORZ, &si);
-            vm.hPos = si.nPos;
+            doc->si.fMask = SIF_POS;
+            GetScrollInfo(hwnd, SB_VERT, &doc->si);
+            doc->vm->vPos = doc->si.nPos;
+            GetScrollInfo(hwnd, SB_HORZ, &doc->si);
+            doc->vm->hPos = doc->si.nPos;
 
-            failClean(vm_drawViewModel(hdc, &vm, &dm, &f) != SUCCESS, EndPaint(hwnd, &ps), "error during drawing")
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            failClean(vm_drawViewModel(hdc, doc->vm, doc->dm, doc->f) != SUCCESS, EndPaint(hwnd, &ps), "error during drawing")
             EndPaint(hwnd, &ps);
             return 0;
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDM_FILE_OPEN:
-                    OPENFILENAME ofn;       // common dialog box structure
-                    char szFile[MAX_PATH];       // buffer for file name
+                    OPENFILENAME ofn;
+                    char szFile[MAX_PATH] = {0};
 
-                    // Initialize OPENFILENAME
-                    ZeroMemory(&ofn, sizeof(ofn));
-                    ofn.lStructSize = sizeof(ofn);
+                    ZeroMemory(&ofn, sizeof ofn);
+                    ofn.lStructSize = sizeof ofn;
                     ofn.hwndOwner = hwnd;
-                    ofn.lpstrFile = szFile;
-                    // Set lpstrFile[0] to '\0' so that GetOpenFileName does not
-                    // use the contents of szFile to initialize itself.
-                    ofn.lpstrFile[0] = '\0';
-                    ofn.nMaxFile = sizeof(szFile);
-                    ofn.lpstrFilter = "*.txt\0";
+                    ofn.lpstrFilter = "*.txt\0\0";
                     ofn.nFilterIndex = 1;
-                    ofn.lpstrFileTitle = NULL;
-                    ofn.nMaxFileTitle = 0;
-                    ofn.lpstrInitialDir = NULL;
+                    ofn.nMaxFile = sizeof szFile;
+                    ofn.lpstrFile = szFile;
                     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
                     if (GetOpenFileName(&ofn) == TRUE) {
-                        readFile(ofn.lpstrFile, &dm);
-                        vm_resizeViewModel(hwnd, &vm, &dm, vm.maxChars, vm.maxLines);
+                        checkRC(docker_setSail(doc, ofn.lpstrFile))
+                        RECT clientRect;
+                        GetClientRect(hwnd, &clientRect);
+                        checkRC(vm_buildViewModel(hwnd, doc->vm, doc->dm,
+                                                   (clientRect.right - clientRect.left) / font_getWidth(doc->f),
+                                                   (clientRect.bottom - clientRect.top) / font_getHeight(doc->f)))
+                        EnableMenuItem(GetMenu(hwnd), IDM_VIEW_WRAP, MF_BYCOMMAND | MF_ENABLED);
                     }
                     break;
                 case IDM_ABOUT:
-                    DialogBox(hInstance, _T("AboutBox"), hwnd, HelpDialogProcedure);
+                    DialogBox(doc->hInstance, _T("AboutBox"), hwnd, AboutDialogProcedure);
                     break;
                 case IDM_APP_EXIT:
                     SendMessage(hwnd, WM_CLOSE, 0, 0);
                     break;
                 case IDM_VIEW_WRAP:
-                    CheckMenuItem(GetMenu(hwnd), IDM_VIEW_WRAP, MF_BYCOMMAND | (GetMenuState(GetMenu(hwnd), IDM_VIEW_WRAP, MF_BYCOMMAND) ^ MF_CHECKED));
-                    vm_changeViewMode(&vm);
-                    vm_resizeViewModel(hwnd, &vm, &dm, vm.maxChars, vm.maxLines);
+                    // the menu is grayed until the docker is sailed
+                    CheckMenuItem(GetMenu(hwnd), IDM_VIEW_WRAP, (GetMenuState(GetMenu(hwnd), IDM_VIEW_WRAP, MF_BYCOMMAND) ^ MF_CHECKED));
+                    vm_changeViewMode(doc->vm);
+                    checkRC(vm_buildViewModel(hwnd, doc->vm, doc->dm, doc->vm->maxChars, doc->vm->maxLines))
                     break;
                 default:
                     break;
@@ -355,8 +273,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     return 0;
 }
 
-BOOL CALLBACK HelpDialogProcedure(HWND hdlg, UINT message, WPARAM wParam, LPARAM lParam) {
-    debug("DIAU'G\n");
+BOOL CALLBACK AboutDialogProcedure(HWND hdlg, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_INITDIALOG:
             return TRUE;

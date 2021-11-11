@@ -60,49 +60,46 @@
 	"BufferedRead.h"
 	"dataModel/dataModel.h"
 
-1636252616 source:d:\programming\projects\win32\reader\array\array.c
+1636592190 source:d:\programming\projects\win32\reader\array\array.c
 	<stdbool.h>
 	<stddef.h>
 	<malloc.h>
 	<memory.h>
 	"array.h"
 
-1636340858 d:\programming\projects\win32\reader\array\array.h
+1636592225 d:\programming\projects\win32\reader\array\array.h
 	"../global.h"
 
-1636401276 d:\programming\projects\win32\reader\global.h
+1636592462 d:\programming\projects\win32\reader\global.h
 	<stdbool.h>
-	"windows.h"
+	<windows.h>
 
-1635722987 d:\programming\projects\win32\reader\datamodel\datamodel.h
+1636592271 d:\programming\projects\win32\reader\datamodel\datamodel.h
 	"../global.h"
 	"../array/array.h"
 
-1636349039 source:d:\programming\projects\win32\reader\datamodel\datamodel.c
-	<stddef.h>
-	<stdbool.h>
+1636597341 source:d:\programming\projects\win32\reader\datamodel\datamodel.c
 	<malloc.h>
 	"dataModel.h"
 
-1636400614 source:d:\programming\projects\win32\reader\font\font.c
+1636597305 source:d:\programming\projects\win32\reader\font\font.c
 	<shlwapi.h>
 	"font.h"
 
-1636244223 d:\programming\projects\win32\reader\font\font.h
+1636597301 d:\programming\projects\win32\reader\font\font.h
 	"../global.h"
 
-1636400821 source:d:\programming\projects\win32\reader\global.c
+1636419191 source:d:\programming\projects\win32\reader\global.c
 	<stdio.h>
 	<stdarg.h>
 	"global.h"
 
-1636408320 source:d:\programming\projects\win32\reader\viewmodel\viewmodel.c
-	<stddef.h>
+1636600893 source:d:\programming\projects\win32\reader\viewmodel\viewmodel.c
 	<malloc.h>
 	"viewModel.h"
 	"../dataModel/dataModel.h"
 
-1636400400 d:\programming\projects\win32\reader\viewmodel\viewmodel.h
+1636591398 d:\programming\projects\win32\reader\viewmodel\viewmodel.h
 	"../global.h"
 	"../array/array.h"
 	"../dataModel/dataModel.h"
@@ -125,20 +122,13 @@
 1636146639 source:d:\programming\projects\win32\reader\global.h
 	"windows.h"
 
-1636416119 source:d:\programming\projects\win32\reader\main.c
-	<tchar.h>
+1636601347 source:d:\programming\projects\win32\reader\main.c
 	<windows.h>
-	"commdlg.h"
-	<stdlib.h>
-	<stdio.h>
+	<tchar.h>
 	<crtdbg.h>
-	<string.h>
 	"global.h"
 	"resources/resource.h"
-	"BufferedRead.h"
-	"dataModel/dataModel.h"
-	"viewModel/viewModel.h"
-	"font/font.h"
+	"docker/docker.h"
 
 1635779868 source:d:\programming\projects\win32\reader\viewmodel\viewmodel.h
 	"../global.h"
@@ -157,13 +147,35 @@
 
 1636409775 d:\programming\projects\win32\reader\resources\reader.h
 
-1636416105 source:d:\programming\projects\win32\reader\resources\reader.rc
+1636595817 source:d:\programming\projects\win32\reader\resources\reader.rc
 	"resource.h"
 	"afxres.h"
 
-1636416105 d:\programming\projects\win32\reader\resources\resource.h
+1636419191 d:\programming\projects\win32\reader\resources\resource.h
 
 1636416105 source:d:\programming\projects\win32\reader\resources\help.rc
 	"resource.h"
 	"afxres.h"
+
+1636597311 source:d:\programming\projects\win32\reader\docker\docker.c
+	"docker.h"
+	"../bufferedRead/bufferedRead.h"
+
+1636597387 source:d:\programming\projects\win32\reader\bufferedread\bufferedread.c
+	<stdio.h>
+	"bufferedRead.h"
+
+1636419907 d:\programming\projects\win32\reader\bufferedread\bufferedread.h
+	"../global.h"
+	"../dataModel/dataModel.h"
+
+1636595776 source:d:\programming\projects\win32\reader\resources\about.rc
+	"resource.h"
+	"afxres.h"
+
+1636592190 d:\programming\projects\win32\reader\docker\docker.h
+	"../global.h"
+	"../dataModel/dataModel.h"
+	"../viewModel/viewModel.h"
+	"../font/font.h"
 

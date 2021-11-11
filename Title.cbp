@@ -52,18 +52,22 @@
 		</Linker>
 		<Unit filename="+.txt" />
 		<Unit filename="-.txt" />
-		<Unit filename="BufferedRead.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="BufferedRead.h" />
 		<Unit filename="array/array.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="array/array.h" />
+		<Unit filename="bufferedRead/bufferedRead.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="bufferedRead/bufferedRead.h" />
 		<Unit filename="dataModel/dataModel.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="dataModel/dataModel.h" />
+		<Unit filename="docker/docker.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="docker/docker.h" />
 		<Unit filename="font/font.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -75,10 +79,14 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="resources/menu.h" />
-		<Unit filename="resources/menu.rc">
+		<Unit filename="resources/about.rc">
 			<Option compilerVar="WINDRES" />
 		</Unit>
+		<Unit filename="resources/menu.h" />
+		<Unit filename="resources/reader.rc">
+			<Option compilerVar="WINDRES" />
+		</Unit>
+		<Unit filename="resources/resource.h" />
 		<Unit filename="viewModel/viewModel.c">
 			<Option compilerVar="CC" />
 		</Unit>

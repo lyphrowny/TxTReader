@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "windows.h"
+#include <windows.h>
 
 #define DEBUG
 
@@ -18,8 +18,6 @@ typedef char buffer;
 #define MIN_LINES 24
 #define MIN_CHARS 80
 
-//#define max(a, b) ((a) > (b) ? (a) : (b))
-//#define min(a, b) ((a) > (b) ? (b) : (a))
 
 typedef enum tagReturnCodes {
     OUT_OF_BOUNDS = -3,
@@ -30,7 +28,7 @@ typedef enum tagReturnCodes {
 } RC;
 
 void debug(const char* format, ...);
-//char* errorMsg[];
+
 void errorPrint(char* msg, const char* fileName, const char*funcName, const int lineNum);
 RC _perror(RC rc, const char* fileName, const char*funcName, const int lineNum);
 
